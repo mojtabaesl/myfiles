@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { MutationCtx, QueryCtx, mutation, query } from "./_generated/server";
 import { getUser } from "./users";
+import { fileTypes } from "./schema";
 
 export const generateUploadUrl = mutation(async (ctx) => {
   const identity = await ctx.auth.getUserIdentity();
@@ -10,6 +11,19 @@ export const generateUploadUrl = mutation(async (ctx) => {
   }
 
   return await ctx.storage.generateUploadUrl();
+});
+
+export const getFileUrl = query({
+  args: { fileId: v.id("_storage") },
+  async handler(ctx, args) {
+    const identity = await ctx.auth.getUserIdentity();
+
+    if (!identity) {
+      throw new ConvexError("Not Authenticated");
+    }
+
+    return await ctx.storage.getUrl(args.fileId);
+  },
 });
 
 async function hasAccessToOrg(
@@ -23,31 +37,6 @@ async function hasAccessToOrg(
     user.tokenIdentifier.includes(props.orgId);
   return hasAccess;
 }
-
-export const createFile = mutation({
-  args: {
-    name: v.string(),
-    orgId: v.string(),
-    fileId: v.id("_storage"),
-  },
-  async handler(ctx, { name, orgId, fileId }) {
-    const identity = await ctx.auth.getUserIdentity();
-
-    if (!identity) {
-      throw new ConvexError("Not Authenticated");
-    }
-
-    const hasAccess = await hasAccessToOrg(ctx, identity.tokenIdentifier, {
-      orgId,
-    });
-
-    if (!hasAccess) {
-      throw new ConvexError("You do not have access to this organization");
-    }
-
-    await ctx.db.insert("files", { name, orgId, fileId });
-  },
-});
 
 export const getFiles = query({
   args: {

@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import type { Doc } from "@/convex/dataModel";
 
 const formSchema = z.object({
   title: z.string().min(1).max(200),
@@ -33,6 +34,13 @@ const formSchema = z.object({
     message: "At least one file is required",
   }),
 });
+
+const filesTypesMapping = {
+  "application/pdf": "pdf",
+  "text/csv": "csv",
+  "image/png": "image",
+  "image/jpeg": "image",
+} as Record<string, Doc<"files">["type"]>;
 
 export const UploadDialog = () => {
   const [isFileDialogOpen, setIsFileDialogOpen] = useState<boolean>(false);
@@ -61,7 +69,12 @@ export const UploadDialog = () => {
       });
 
       const { storageId } = await result.json();
-      await createFile({ name: title, orgId, fileId: storageId });
+      await createFile({
+        name: title,
+        orgId,
+        fileId: storageId,
+        type: filesTypesMapping[files[0].type],
+      });
       form.reset();
       setIsFileDialogOpen(false);
       toast({

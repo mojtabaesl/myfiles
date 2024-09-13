@@ -23,16 +23,37 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import { Doc } from "@/convex/dataModel";
-import { EllipsisVerticalIcon, Trash2Icon } from "lucide-react";
-import { useState } from "react";
-import { useMutation } from "convex/react";
+import { Doc, Id } from "@/convex/dataModel";
+import {
+  EllipsisVerticalIcon,
+  FileTextIcon,
+  GanttChartIcon,
+  ImageIcon,
+  Trash2Icon,
+} from "lucide-react";
+import { ReactNode, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/api";
 import { useToast } from "@/hooks/use-toast";
+import Image from "next/image";
 
 interface FileCardProps {
   file: Doc<"files">;
 }
+
+const fileTypesIcons = {
+  image: <ImageIcon />,
+  pdf: <FileTextIcon />,
+  csv: <GanttChartIcon />,
+} as Record<Doc<"files">["type"], ReactNode>;
+
+// function getFileUrl(storageId: Id<"_storage">) {
+//   const getImageUrl = new URL(`${process.env.NEXT_PUBLIC_CONVEX_URL}/getImage`);
+//   getImageUrl.searchParams.set("storageId", storageId);
+//   console.log({ url: getImageUrl.href });
+
+//   return getImageUrl.href;
+// }
 
 const FileCardActions = ({ file }: { file: Doc<"files"> }) => {
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
@@ -42,7 +63,6 @@ const FileCardActions = ({ file }: { file: Doc<"files"> }) => {
   return (
     <>
       <AlertDialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
-        {/* <AlertDialogTrigger>Open</AlertDialogTrigger> */}
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
@@ -88,19 +108,34 @@ const FileCardActions = ({ file }: { file: Doc<"files"> }) => {
 };
 
 export const FileCard = ({ file }: FileCardProps) => {
+  const fileUrl = useQuery(api.files.getFileUrl, { fileId: file.fileId });
   return (
     <Card className="relative">
       <CardHeader>
-        <CardTitle>{file.name}</CardTitle>
+        <CardTitle className="flex gap-2">
+          {fileTypesIcons[file.type]}
+          {file.name}
+        </CardTitle>
         <div className="absolute right-3 top-2">
           <FileCardActions file={file} />
         </div>
       </CardHeader>
-      <CardContent>
-        <p>Card Content</p>
+      <CardContent className="flex justify-center">
+        {fileUrl && file.type === "image" ? (
+          <Image alt={file.name} width="200" height="100" src={fileUrl} />
+        ) : null}
+        {file.type === "csv" ? <GanttChartIcon className="w-20 h-20" /> : null}
+        {file.type === "pdf" ? <FileTextIcon className="w-20 h-20" /> : null}
       </CardContent>
       <CardFooter>
-        <Button>Download</Button>
+        <Button
+          onClick={() => {
+            if (!fileUrl) return;
+            window.open(fileUrl, "_blank");
+          }}
+        >
+          Download
+        </Button>
       </CardFooter>
     </Card>
   );
